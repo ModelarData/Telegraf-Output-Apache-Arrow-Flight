@@ -25,7 +25,9 @@ To build the plugin binary and run it:
 5. If you are using Linux/macOS, omit the `.exe` file extension at line 768 in [telegraf.conf](telegraf.conf).
 6. Run the plugin using telegraf: `telegraf --config telegraf.conf`
 
-To run the 
+To run the tests: 
+1. Install the latest version of [Go](https://go.dev/doc/install).
+2. Run the command: `go test plugins/output/flight/flight_test.go plugins/output/flight/flight.go`
 
 
 ## Configuration
