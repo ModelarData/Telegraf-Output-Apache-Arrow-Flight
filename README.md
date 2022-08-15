@@ -48,5 +48,5 @@ To run the tests:
 
 * The descriptor is attached every time a payload is written to `DoPut()`.
 * `GetSchema()` relies on a "hack" in ModelarDB-RS, because a bug is present in the Rust implementation of Apache Arrow Flight where the schema is not serialized properly.
-* The schema is retrieved from the flight server, but there is currently nothing implemented to handle a schema other than the one described above because a builder has to manually be initialized for the type of each field.
+* The schema is retrieved from the flight server, but there is currently nothing implemented to handle a schema other than the one described above, because a builder has to manually be initialized for the type of each field.
 * Testing is still unstable.
