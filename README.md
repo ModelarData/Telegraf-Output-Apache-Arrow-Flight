@@ -14,7 +14,7 @@ The plugin currently supports inserting data points with the following schema:
 
 ## Setting up and running the plugin
 
-To build the plugin binary and run it:
+To build the binary and run the plugin:
 
 1. Install the latest version of [Go](https://go.dev/doc/install).
 2. Download the latest version of [telegraf](https://github.com/influxdata/telegraf/releases) for your platform. (To see which platform is needed, run the following command: `go env GOOS GOARCH`)
