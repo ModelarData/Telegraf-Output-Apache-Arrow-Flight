@@ -17,13 +17,17 @@ The plugin currently supports inserting data points with the following schema:
 To build the binary and run the plugin:
 
 1. Install the latest version of [Go](https://go.dev/doc/install).
-2. Download the latest version of [telegraf](https://github.com/influxdata/telegraf/releases) for your platform. (To see which platform is needed, run the following command: `go env GOOS GOARCH`)
-3. Extract the telegraf executable to the repository folder.
-4. Build the binary:
+2. Build the binary:
     * Windows: `go build -o binary/flight.exe cmd/main.go`
     * Linux/macOS: `go build -o binary/flight cmd/main.go`
-5. If you are using Linux/macOS, omit the `.exe` file extension at line 768 in [telegraf.conf](telegraf.conf).
-6. Run the plugin using telegraf: `telegraf --config telegraf.conf`
+3. Download the latest version of [telegraf](https://github.com/influxdata/telegraf/releases) for your platform. (To see which platform is needed, run the following command: `go env GOOS GOARCH`)
+4. Extract the telegraf executable and configuration to the repository folder.
+5. Configure the telegraf.conf file:
+   * Search for `execd`, remove the comment in front of the tag `[[outputs.execd]]` and the option `command`.
+     * Windows: Assign the following to `command`: `["./binary/flight.exe", "-config", "./plugins/output/flight/sample.conf"]` 
+     * Linux/macOS: Assign the following to `command`: `["./binary/flight", "-config", "./plugins/output/flight/sample.conf"]` 
+   * Configure any input plugin to consume metrics. (the metric must adhere to the schema presented in this README)
+6. Run the plugin using telegraf: `telegraf --config telegraf.conf --input-filter mqtt_consumer --output-filter execd`
 
 To run the tests: 
 1. Install the latest version of [Go](https://go.dev/doc/install).
