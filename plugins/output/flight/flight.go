@@ -30,7 +30,6 @@ func (*Flight) SampleConfig() string {
 type Flight struct {
 	Location string `toml:"location"`
 	Port     string `toml:"port"`
-	Table    string `toml:"table"`
 
 	timeStamps []arrow.Timestamp
 	values     []float32
@@ -80,8 +79,6 @@ func (s *Flight) Write(metrics []telegraf.Metric) error {
 
 	s.values = nil
 
-	s.desc = nil
-
 	return nil
 }
 
@@ -108,10 +105,21 @@ func (s *Flight) Connect() error {
 		log.Fatal(err)
 	}
 
-	s.desc = &flight.FlightDescriptor{
-		Type: 1,
-		Path: []string{s.Table},
+	flights, err := s.client.ListFlights(s.ctx, &flight.Criteria{})
+
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	flightsInfo, err := flights.Recv()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	flightDescriptor := flightsInfo.GetFlightDescriptor()
+
+	s.desc = flightDescriptor
 
 	getSchema, err := s.client.GetSchema(s.ctx, s.desc)
 
@@ -128,6 +136,10 @@ func (s *Flight) Connect() error {
 	}
 
 	s.schema = *deserializedSchema
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	stream, err := s.client.DoPut(s.ctx)
 
