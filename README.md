@@ -31,7 +31,8 @@ To build the binary and run the plugin:
 
 To run the tests: 
 1. Install the latest version of [Go](https://go.dev/doc/install).
-2. Run the command: `go test plugins/output/flight/flight_test.go plugins/output/flight/flight.go`
+2. Start the Flight Server.
+3. Run the command: `go test plugins/output/flight/flight_test.go plugins/output/flight/flight.go`
 
 
 ## Configuration
