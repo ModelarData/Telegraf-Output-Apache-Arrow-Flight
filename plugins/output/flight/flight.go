@@ -3,7 +3,6 @@ package flight
 import (
 	"context"
 	_ "embed"
-	"log"
 	"net"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -40,7 +39,7 @@ type Flight struct {
 	writer flight.Writer
 	schema arrow.Schema
 	ctx    context.Context
-	pool   memory.GoAllocator
+	pool   memory.Allocator
 	desc   *flight.FlightDescriptor
 }
 
@@ -58,12 +57,14 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 		for _, field := range m.FieldList() {
 			f.values = append(f.values, float32(field.Value.(float64)))
 		}
-
 	}
 
-	builder := array.NewRecordBuilder(&f.pool, &f.schema)
+	builder := array.NewRecordBuilder(f.pool, &f.schema)
 	defer builder.Release()
 
+	//Currently, the plugin only implements support for the simplest schema
+	//supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS),
+	//as listed below. Support for an arbitrary schema is planned.
 	builder.Field(0).(*array.Int32Builder).AppendValues([]int32{1}, nil)
 	builder.Field(1).(*array.TimestampBuilder).AppendValues(f.timeStamps, nil)
 	builder.Field(2).(*array.Float32Builder).AppendValues(f.values, nil)
@@ -74,7 +75,7 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 	err := f.writer.Write(rec)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	f.timeStamps = nil
@@ -84,33 +85,39 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-// Make any connection required here
+// Make any connection required here. If an error is at any point returned
+// it will be written to the output and the plugin will attempt to restart.
 func (f *Flight) Connect() error {
 
+	//Create a new connection to the grpc using the given target.
 	conn, err := grpc.Dial(net.JoinHostPort(f.Location, f.Port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
+	//Create an empty context and add it to the Flight struct.
 	f.ctx = context.Background()
 
+	//Initialize a new Flight Service Client using the client API and add it to the Flight struct.
 	f.client = flight.NewFlightServiceClient(conn)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
+	//Read the table value from the configuration file and add it to the Flight Descriptor in the Flight struct.
 	f.desc = &flight.FlightDescriptor{
 		Type: 1,
 		Path: []string{f.Table},
 	}
 
+	//Retrieve the schema from the server, deserialize it and add it to the Flight struct.
 	getSchema, err := f.client.GetSchema(f.ctx, f.desc)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	retrievedSchema := getSchema.GetSchema()
@@ -118,24 +125,25 @@ func (f *Flight) Connect() error {
 	deserializedSchema, err := flight.DeserializeSchema(retrievedSchema, memory.DefaultAllocator)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	f.schema = *deserializedSchema
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
+	//Push a new DoPut stream to the server using the Flight Service Client.
 	stream, err := f.client.DoPut(f.ctx)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	f.pool = *memory.NewGoAllocator()
+	f.pool = memory.DefaultAllocator
 
-	f.writer = *flight.NewRecordWriter(stream, ipc.WithSchema(&f.schema), ipc.WithAllocator(&f.pool))
+	f.writer = *flight.NewRecordWriter(stream, ipc.WithSchema(&f.schema), ipc.WithAllocator(f.pool))
 
 	f.writer.SetFlightDescriptor(f.desc)
 
@@ -144,7 +152,12 @@ func (f *Flight) Connect() error {
 
 // Close any connections here.
 func (f *Flight) Close() error {
-	f.writer.Close()
+	err := f.writer.Close()
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
