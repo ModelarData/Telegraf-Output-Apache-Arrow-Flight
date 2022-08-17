@@ -45,6 +45,9 @@ To run the tests:
 
     ## Port to connect to.
     port = "9999"
+    
+    ## Table to insert to.
+    table = ""
 ```
 ## Known issues
 

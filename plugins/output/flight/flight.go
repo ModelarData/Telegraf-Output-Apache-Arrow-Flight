@@ -30,6 +30,7 @@ func (*Flight) SampleConfig() string {
 type Flight struct {
 	Location string `toml:"location"`
 	Port     string `toml:"port"`
+	Table    string `toml:"table"`
 
 	timeStamps []arrow.Timestamp
 	values     []float32
@@ -105,21 +106,10 @@ func (s *Flight) Connect() error {
 		log.Fatal(err)
 	}
 
-	flights, err := s.client.ListFlights(s.ctx, &flight.Criteria{})
-
-	if err != nil {
-		log.Fatal(err)
+	s.desc = &flight.FlightDescriptor{
+		Type: 1,
+		Path: []string{s.Table},
 	}
-
-	flightsInfo, err := flights.Recv()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	flightDescriptor := flightsInfo.GetFlightDescriptor()
-
-	s.desc = flightDescriptor
 
 	getSchema, err := s.client.GetSchema(s.ctx, s.desc)
 
