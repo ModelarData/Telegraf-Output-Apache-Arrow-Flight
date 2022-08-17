@@ -18,15 +18,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-// DO NOT REMOVE THE NEXT TWO LINES! This is required to embed the sampleConfig data.
-//
 //go:embed sample.conf
 var sampleConfig string
 
+// SampleConfig returns the configuration of the Apache Arrow Flight plugin.
 func (*Flight) SampleConfig() string {
 	return sampleConfig
 }
 
+// Flight contains the configuration, data structures, and interfaces for the Apache Arrow Flight plugin.
+// It is the primary data structure for the plugin.
 type Flight struct {
 	Location string `toml:"location"`
 	Port     string `toml:"port"`
@@ -46,72 +47,67 @@ type Flight struct {
 // Write should write immediately to the output, and not buffer writes
 // (Telegraf manages the buffer for you). Returning an error will fail this
 // batch of writes and the entire batch will be retried automatically.
-func (s *Flight) Write(metrics []telegraf.Metric) error {
+func (f *Flight) Write(metrics []telegraf.Metric) error {
 
 	for _, m := range metrics {
 
 		timeInt := m.Time().UnixMilli()
 
-		s.timeStamps = append(s.timeStamps, arrow.Timestamp(timeInt))
+		f.timeStamps = append(f.timeStamps, arrow.Timestamp(timeInt))
 
 		for _, field := range m.FieldList() {
-			s.values = append(s.values, float32(field.Value.(float64)))
+			f.values = append(f.values, float32(field.Value.(float64)))
 		}
 
 	}
 
-	b := array.NewRecordBuilder(&s.pool, &s.schema)
-	defer b.Release()
+	builder := array.NewRecordBuilder(&f.pool, &f.schema)
+	defer builder.Release()
 
-	b.Field(0).(*array.Int32Builder).AppendValues([]int32{1}, nil)
-	b.Field(1).(*array.TimestampBuilder).AppendValues(s.timeStamps, nil)
-	b.Field(2).(*array.Float32Builder).AppendValues(s.values, nil)
+	builder.Field(0).(*array.Int32Builder).AppendValues([]int32{1}, nil)
+	builder.Field(1).(*array.TimestampBuilder).AppendValues(f.timeStamps, nil)
+	builder.Field(2).(*array.Float32Builder).AppendValues(f.values, nil)
 
-	rec := b.NewRecord()
+	rec := builder.NewRecord()
 	defer rec.Release()
 
-	err := s.writer.Write(rec)
+	err := f.writer.Write(rec)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s.timeStamps = nil
+	f.timeStamps = nil
 
-	s.values = nil
-
-	return nil
-}
-
-// Init is for setup, and validating config.
-func (s *Flight) Init() error {
+	f.values = nil
 
 	return nil
 }
 
 // Make any connection required here
-func (s *Flight) Connect() error {
+func (f *Flight) Connect() error {
 
-	conn, err := grpc.Dial(net.JoinHostPort(s.Location, s.Port), grpc.WithTransportCredentials(insecure.NewCredentials()))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s.ctx = context.Background()
-
-	s.client = flight.NewFlightServiceClient(conn)
+	conn, err := grpc.Dial(net.JoinHostPort(f.Location, f.Port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s.desc = &flight.FlightDescriptor{
+	f.ctx = context.Background()
+
+	f.client = flight.NewFlightServiceClient(conn)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	f.desc = &flight.FlightDescriptor{
 		Type: 1,
-		Path: []string{s.Table},
+		Path: []string{f.Table},
 	}
 
-	getSchema, err := s.client.GetSchema(s.ctx, s.desc)
+	getSchema, err := f.client.GetSchema(f.ctx, f.desc)
 
 	if err != nil {
 		log.Fatal(err)
@@ -125,31 +121,30 @@ func (s *Flight) Connect() error {
 		log.Fatal(err)
 	}
 
-	s.schema = *deserializedSchema
+	f.schema = *deserializedSchema
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	stream, err := s.client.DoPut(s.ctx)
+	stream, err := f.client.DoPut(f.ctx)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	s.pool = *memory.NewGoAllocator()
+	f.pool = *memory.NewGoAllocator()
 
-	s.writer = *flight.NewRecordWriter(stream, ipc.WithSchema(&s.schema), ipc.WithAllocator(&s.pool))
+	f.writer = *flight.NewRecordWriter(stream, ipc.WithSchema(&f.schema), ipc.WithAllocator(&f.pool))
 
-	s.writer.SetFlightDescriptor(s.desc)
+	f.writer.SetFlightDescriptor(f.desc)
 
 	return nil
 }
 
-func (s *Flight) Close() error {
-	// Close any connections here.
-	// Write will not be called once Close is called, so there is no need to synchronize.
-	s.writer.Close()
+// Close any connections here.
+func (f *Flight) Close() error {
+	f.writer.Close()
 	return nil
 }
 
