@@ -3,6 +3,7 @@ package flight
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"net"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -32,9 +33,6 @@ type Flight struct {
 	Port     string `toml:"port"`
 	Table    string `toml:"table"`
 
-	timeStamps []arrow.Timestamp
-	values     []float32
-
 	client flight.FlightServiceClient
 	writer flight.Writer
 	schema arrow.Schema
@@ -48,39 +46,39 @@ type Flight struct {
 // batch of writes and the entire batch will be retried automatically.
 func (f *Flight) Write(metrics []telegraf.Metric) error {
 
-	for _, m := range metrics {
-
-		timeInt := m.Time().UnixMilli()
-
-		f.timeStamps = append(f.timeStamps, arrow.Timestamp(timeInt))
-
-		for _, field := range m.FieldList() {
-			f.values = append(f.values, float32(field.Value.(float64)))
-		}
-	}
-
 	builder := array.NewRecordBuilder(f.pool, &f.schema)
 	defer builder.Release()
 
 	//Currently, the plugin only implements support for the simplest schema
 	//supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS),
 	//as listed below. Support for an arbitrary schema is planned.
-	builder.Field(0).(*array.Int32Builder).AppendValues([]int32{1}, nil)
-	builder.Field(1).(*array.TimestampBuilder).AppendValues(f.timeStamps, nil)
-	builder.Field(2).(*array.Float32Builder).AppendValues(f.values, nil)
+	tidBuilder := builder.Field(0).(*array.Int32Builder)
+	timeBuilder := builder.Field(1).(*array.TimestampBuilder)
+	valueBuilder := builder.Field(2).(*array.Float32Builder)
+
+	for _, m := range metrics {
+
+		tidBuilder.AppendValues([]int32{1}, nil)
+
+		timeInt := m.Time().UnixMilli()
+
+		timeBuilder.AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
+
+		for _, field := range m.FieldList() {
+			valueBuilder.AppendValues([]float32{float32(field.Value.(float64))}, nil)
+		}
+	}
 
 	rec := builder.NewRecord()
 	defer rec.Release()
+
+	fmt.Println(rec)
 
 	err := f.writer.Write(rec)
 
 	if err != nil {
 		return err
 	}
-
-	f.timeStamps = nil
-
-	f.values = nil
 
 	return nil
 }
