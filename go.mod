@@ -6,7 +6,6 @@ require (
 	github.com/apache/arrow/go/v9 v9.0.0
 	github.com/influxdata/telegraf v1.23.3
 	github.com/stretchr/testify v1.7.4
-	github.com/testcontainers/testcontainers-go v0.12.0
 	google.golang.org/grpc v1.48.0
 )
 
@@ -71,6 +70,7 @@ require (
 	github.com/prometheus/prometheus v1.8.2-0.20210430082741-2a4b8e12bbf2 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/sleepinggenius2/gosmi v0.4.4 // indirect
+	github.com/testcontainers/testcontainers-go v0.12.0 // indirect
 	github.com/tidwall/gjson v1.14.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect

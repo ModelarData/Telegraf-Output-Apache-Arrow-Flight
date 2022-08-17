@@ -31,7 +31,8 @@ To build the binary and run the plugin:
      * Windows: Assign the following to `command` so the resulting line becomes: `command = ["/path/to/flight.exe", "-config", "/path/to/sample.conf"]` 
      * Linux/macOS: Assign the following to `command` so the resulting line becomes: `command = ["/path/to/flight", "-config", "/path/to/sample.conf"]` 
    * Configure any input plugin to consume metrics. (the metric must adhere to the schema presented in this README)
-6. Run the plugin using telegraf: `telegraf --config telegraf.conf --input-filter chosen_input_plugin --output-filter execd`
+6. Configure the [sample configuration](\plugins\output\flight\sample.conf) to connect to the desired server, and designate the desired table to store metrics in.
+7. Run the plugin using telegraf: `telegraf --config telegraf.conf --input-filter chosen_input_plugin --output-filter execd`
 
 To run the tests: 
 1. Install the latest version of [Go](https://go.dev/doc/install).
@@ -60,4 +61,3 @@ The following configuration is a [sample configuration](\plugins\output\flight\s
 
 * Currently, the plugin only implements support for the simplest schema supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS), as listed above. Support for an arbitrary schema is planned.
 * `GetSchema()` is not compatible with the Rust implementation of Apache Arrow Flight, because a [bug](https://github.com/apache/arrow-rs/issues/2445) is present in the Rust implementation of Apache Arrow Flight where the schema is not serialized properly.
-* The schema is retrieved from the flight server, but there is currently nothing implemented to handle a schema other than the one described above, because a builder has to manually be initialized for the type of each field.

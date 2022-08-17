@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	// TODO: import your plugins
 	_ "github.com/agneborn98/Arrow-Flight-ModelarDB-Output-Plugin/plugins/output/flight"
 
 	"github.com/influxdata/telegraf/plugins/common/shim"
@@ -30,15 +29,15 @@ var err error
 // shim := shim.New()
 // shim.AddInput(myInput)
 //
-// // now the shim.Run() call as below. Note the shim is only intended to run a single plugin.
+// // Now the shim.Run() call as below. Note the shim is only intended to run a single plugin.
 func main() {
-	// parse command line options
+	// Parse command line options.
 	flag.Parse()
 	if *pollIntervalDisabled {
 		*pollInterval = shim.PollIntervalDisabled
 	}
 
-	// create the shim. This is what will run your plugins.
+	// Create the shim. This is what will run your plugins.
 	shimLayer := shim.New()
 
 	// If no config is specified, all imported plugins are loaded.
@@ -51,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// run a single plugin until stdin closes or we receive a termination signal
+	// Run a single plugin until stdin closes or we receive a termination signal.
 	if err := shimLayer.Run(*pollInterval); err != nil {
 		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
 		os.Exit(1)
