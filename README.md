@@ -62,4 +62,4 @@ The following configuration is a [sample configuration](\plugins\output\flight\s
 ## Known issues and limitations
 
 * Currently, the plugin only implements support for the simplest schema supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS), as listed above. Support for an arbitrary schema is planned.
-* `GetSchema()` is not compatible with the Rust implementation of Apache Arrow Flight, because a [bug](https://github.com/apache/arrow-rs/issues/2445) is present in the Rust implementation of Apache Arrow Flight where the schema is not serialized properly.
+* This plugin is not compatible with the Rust implementation of Apache Arrow Flight, because a [bug](https://github.com/apache/arrow-rs/issues/2445) is present in the Rust implementation of Apache Arrow Flight where the schema is not serialized properly.
