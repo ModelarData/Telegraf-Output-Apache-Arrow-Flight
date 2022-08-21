@@ -3,7 +3,6 @@ package flight
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"net"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -37,7 +36,6 @@ type Flight struct {
 	writer flight.Writer
 	schema arrow.Schema
 	ctx    context.Context
-	pool   memory.Allocator
 	desc   *flight.FlightDescriptor
 }
 
@@ -46,15 +44,18 @@ type Flight struct {
 // batch of writes and the entire batch will be retried automatically.
 func (f *Flight) Write(metrics []telegraf.Metric) error {
 
-	builder := array.NewRecordBuilder(f.pool, &f.schema)
+	builder := array.NewRecordBuilder(memory.DefaultAllocator, &f.schema)
 	defer builder.Release()
 
-	//Currently, the plugin only implements support for the simplest schema
-	//supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS),
-	//as listed below. Support for an arbitrary schema is planned.
-	tidBuilder := builder.Field(0).(*array.Int32Builder)
+	// Currently, the plugin only implements support for the simplest schema
+	// supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS),
+	// as listed below. Support for an arbitrary schema is planned.
+
+	tidBuilder := builder.Field(0).(*array.Int32Builder) //Unused and deprecated time series identifier.
 	timeBuilder := builder.Field(1).(*array.TimestampBuilder)
 	valueBuilder := builder.Field(2).(*array.Float32Builder)
+
+	builder.Reserve(len(metrics))
 
 	for _, m := range metrics {
 
@@ -72,22 +73,14 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 	rec := builder.NewRecord()
 	defer rec.Release()
 
-	fmt.Println(rec)
-
-	err := f.writer.Write(rec)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return f.writer.Write(rec)
 }
 
-// Make any connection required here. If an error is at any point returned
+// Connect to the Apache Arrow Flight server. If an error is at any point returned
 // it will be written to the output and the plugin will attempt to restart.
 func (f *Flight) Connect() error {
 
-	//Create a new connection to the grpc using the given target.
+	// Create a new connection to the grpc using the given target.
 	conn, err := grpc.Dial(net.JoinHostPort(f.Location, f.Port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 
@@ -95,23 +88,23 @@ func (f *Flight) Connect() error {
 		return err
 	}
 
-	//Create an empty context and add it to the Flight struct.
+	// Create an empty context and add it to the Flight struct.
 	f.ctx = context.Background()
 
-	//Initialize a new Flight Service Client using the client API and add it to the Flight struct.
+	// Initialize a new Flight Service Client using the client API and add it to the Flight struct.
 	f.client = flight.NewFlightServiceClient(conn)
 
 	if err != nil {
 		return err
 	}
 
-	//Read the table value from the configuration file and add it to the Flight Descriptor in the Flight struct.
+	// Read the table value from the configuration file and add it to the Flight Descriptor in the Flight struct.
 	f.desc = &flight.FlightDescriptor{
 		Type: 1,
 		Path: []string{f.Table},
 	}
 
-	//Retrieve the schema from the server, deserialize it and add it to the Flight struct.
+	// Retrieve the schema from the server, deserialize it and add it to the Flight struct.
 	getSchema, err := f.client.GetSchema(f.ctx, f.desc)
 
 	if err != nil {
@@ -132,31 +125,23 @@ func (f *Flight) Connect() error {
 		return err
 	}
 
-	//Push a new DoPut stream to the server using the Flight Service Client.
+	// Push a new DoPut stream to the server using the Flight Service Client.
 	stream, err := f.client.DoPut(f.ctx)
 
 	if err != nil {
 		return err
 	}
 
-	f.pool = memory.DefaultAllocator
-
-	f.writer = *flight.NewRecordWriter(stream, ipc.WithSchema(&f.schema), ipc.WithAllocator(f.pool))
+	f.writer = *flight.NewRecordWriter(stream, ipc.WithSchema(&f.schema), ipc.WithAllocator(memory.DefaultAllocator))
 
 	f.writer.SetFlightDescriptor(f.desc)
 
 	return nil
 }
 
-// Close any connections here.
+// Close the connection to the Apache Arrow Flight server.
 func (f *Flight) Close() error {
-	err := f.writer.Close()
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return f.writer.Close()
 }
 
 func init() {

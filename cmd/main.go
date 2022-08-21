@@ -11,12 +11,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/shim"
 )
 
-var pollInterval = flag.Duration("poll_interval", 1*time.Second, "how often to send metrics")
-var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "set to true to disable polling. You want to use this when you are sending metrics on your own schedule")
-var configFile = flag.String("config", "", "path to the config file for this plugin")
-var err error
-
 func main() {
+
+	var pollInterval = flag.Duration("poll_interval", 1*time.Second, "how often to send metrics")
+	var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "set to true to disable polling. You want to use this when you are sending metrics on your own schedule")
+	var configFile = flag.String("config", "", "path to the config file for this plugin")
+	var err error
+
 	// Parse command line options.
 	flag.Parse()
 	if *pollIntervalDisabled {
