@@ -51,7 +51,7 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 	// supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS),
 	// as listed below. Support for an arbitrary schema is planned.
 
-	tidBuilder := builder.Field(0).(*array.Int32Builder) //Unused and deprecated time series identifier.
+	tidBuilder := builder.Field(0).(*array.Int32Builder) // Unused and deprecated time series identifier.
 	timeBuilder := builder.Field(1).(*array.TimestampBuilder)
 	valueBuilder := builder.Field(2).(*array.Float32Builder)
 
@@ -80,7 +80,7 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 // it will be written to the output and the plugin will attempt to restart.
 func (f *Flight) Connect() error {
 
-	// Create a new connection to the grpc using the given target.
+	// Create a new connection to the gRPC server using the given target.
 	conn, err := grpc.Dial(net.JoinHostPort(f.Location, f.Port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 
@@ -93,10 +93,6 @@ func (f *Flight) Connect() error {
 
 	// Initialize a new Flight Service Client using the client API and add it to the Flight struct.
 	f.client = flight.NewFlightServiceClient(conn)
-
-	if err != nil {
-		return err
-	}
 
 	// Read the table value from the configuration file and add it to the Flight Descriptor in the Flight struct.
 	f.desc = &flight.FlightDescriptor{
@@ -120,10 +116,6 @@ func (f *Flight) Connect() error {
 	}
 
 	f.schema = *deserializedSchema
-
-	if err != nil {
-		return err
-	}
 
 	// Push a new DoPut stream to the server using the Flight Service Client.
 	stream, err := f.client.DoPut(f.ctx)

@@ -4,12 +4,12 @@ This Telegraf output plugin is a general purpose output plugin for the [Apache A
 
 ## Arrow Schema
 
-The plugin currently supports inserting data points with the following schema:
+The plugin currently supports outputting data points with the following schema:
 
 ```go
 schema:
   fields: 3
-    - tid: type=int32 //Unused and deprecated time series identifier.
+    - tid: type=int32 // Unused and deprecated time series identifier.
     - timestamp: type=timestamp[ms]
     - value: type=float32
 ```
