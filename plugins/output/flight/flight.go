@@ -65,9 +65,9 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 
 		timeBuilder.AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
 
-		for _, field := range m.FieldList() {
-			valueBuilder.AppendValues([]float32{float32(field.Value.(float64))}, nil)
-		}
+		fieldlst := m.FieldList()
+
+		valueBuilder.AppendValues([]float32{float32(fieldlst[0].Value.(float64))}, nil)
 	}
 
 	rec := builder.NewRecord()
