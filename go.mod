@@ -1,5 +1,4 @@
-module github.com/agneborn98/Arrow-Flight-ModelarDB-Output-Plugin
-
+module github.com/ModelarData/Telegraf-Output-Apache-Arrow-Flight
 go 1.19
 
 require (

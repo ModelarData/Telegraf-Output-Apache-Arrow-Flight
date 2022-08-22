@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	_ "github.com/agneborn98/Arrow-Flight-ModelarDB-Output-Plugin/plugins/output/flight"
+	_ "github.com/ModelarData/Telegraf-Output-Apache-Arrow-Flight/plugins/output/flight"
 
 	"github.com/influxdata/telegraf/plugins/common/shim"
 )
