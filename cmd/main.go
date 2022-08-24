@@ -28,12 +28,12 @@ func main() {
 
 	err = shimLayer.LoadConfig(configFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Err loading input: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error loading input: %s\n", err)
 		os.Exit(1)
 	}
 
 	if err := shimLayer.Run(*pollInterval); err != nil {
-		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
 }
