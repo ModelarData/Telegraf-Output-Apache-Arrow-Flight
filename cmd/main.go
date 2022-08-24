@@ -13,8 +13,8 @@ import (
 
 func main() {
 
-	var pollInterval = flag.Duration("poll_interval", 1*time.Second, "how often to send metrics(in seconds)")
-	var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "set to true to disable polling. You want to use this when you are sending metrics on your own schedule")
+	var pollInterval = flag.Duration("poll_interval", 1*time.Second, "how often to send metrics (in seconds)")
+	var pollIntervalDisabled = flag.Bool("poll_interval_disabled", false, "Set to true to disable polling. Use this when you are sending metrics on your own schedule")
 	var configFile = flag.String("config", "", "path to the config file for this plugin")
 	var err error
 

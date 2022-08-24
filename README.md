@@ -32,7 +32,7 @@ To build the binary and run the plugin:
       `command = ["/path/to/flight.exe", "-config", "/path/to/sample.conf"]` 
      * Linux/macOS: Assign the following to `command` so the resulting line becomes:  
       `command = ["/path/to/flight", "-config", "/path/to/sample.conf"]` 
-   * Configure any input plugin to consume metrics. (the metric must adhere to the schema presented in this README)
+   * Configure any input plugin to consume metrics. (The metric must adhere to the schema presented in this README)
 6. Configure the [sample configuration](\plugins\output\flight\sample.conf) to connect to the desired server, and designate the desired table to store metrics in.
 7. Run the plugin using Telegraf: `telegraf --config telegraf.conf --input-filter chosen_input_plugin --output-filter execd`
 
@@ -47,7 +47,7 @@ To run the tests:
 The following configuration is a [sample configuration](\plugins\output\flight\sample.conf) used to connect to the Arrow Flight Server and configure what table to insert the data into.
 
 ```toml @sample.conf
-## Configuration for Arrow Flight to send metrics to.
+## Configuration for where the Arrow Flight Client will send metrics to.
 [[outputs.flight]]
     ## URL to connect to.
     location = "0.0.0.0"
@@ -56,8 +56,7 @@ The following configuration is a [sample configuration](\plugins\output\flight\s
     port = "9999"
     
     ## Name of the table to store the metrics in.
-    ## example: table = "data"
-    table = ""
+    table = "data"
 ```
 ## Known issues and limitations
 
