@@ -3,6 +3,8 @@ package flight
 import (
 	"context"
 	_ "embed"
+	"errors"
+	"fmt"
 	"net"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -47,27 +49,41 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 	builder := array.NewRecordBuilder(memory.DefaultAllocator, &f.schema)
 	defer builder.Release()
 
-	// Currently, the plugin only implements support for the simplest schema
-	// supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS),
-	// as listed below. Support for an arbitrary schema is planned.
-
-	tidBuilder := builder.Field(0).(*array.Int32Builder) // Unused and deprecated time series identifier.
-	timeBuilder := builder.Field(1).(*array.TimestampBuilder)
-	valueBuilder := builder.Field(2).(*array.Float32Builder)
+	schemaFields := f.schema.Fields()
 
 	builder.Reserve(len(metrics))
 
 	for _, m := range metrics {
 
-		tidBuilder.AppendValues([]int32{1}, nil)
-
 		timeInt := m.Time().UnixMilli()
 
-		timeBuilder.AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
+		var sliceOfFields []any
 
-		fieldlst := m.FieldList()
+		sliceOfFields = append(sliceOfFields, timeInt)
 
-		valueBuilder.AppendValues([]float32{float32(fieldlst[0].Value.(float64))}, nil)
+		for _, field := range m.FieldList() {
+			sliceOfFields = append(sliceOfFields, field.Value)
+		}
+
+		fmt.Println(sliceOfFields)
+
+		for i, m := range schemaFields {
+			if len(schemaFields) != len(sliceOfFields) {
+				return errors.New("the number of fields in the schema does not match the number of fields in the metric")
+			}
+			switch m.Type.ID() {
+			case arrow.TIMESTAMP:
+				builder.Field(i).(*array.TimestampBuilder).AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
+			case arrow.INT32:
+				builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(sliceOfFields[i].(int64))}, nil)
+			case arrow.INT64:
+				builder.Field(i).(*array.Int64Builder).AppendValues([]int64{sliceOfFields[i].(int64)}, nil)
+			case arrow.FLOAT64:
+				builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(sliceOfFields[i].(float64))}, nil)
+			case arrow.FLOAT32:
+				builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(sliceOfFields[i].(float64))}, nil)
+			}
+		}
 	}
 
 	rec := builder.NewRecord()
