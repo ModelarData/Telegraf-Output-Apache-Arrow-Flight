@@ -3,7 +3,6 @@ package flight
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"net"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -57,7 +56,6 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 		timeInt := m.Time().UnixMilli()
 
 		for i, f := range schemaFields {
-			fmt.Println(f.Name)
 			switch f.Type.ID() {
 			case arrow.TIMESTAMP:
 				builder.Field(i).(*array.TimestampBuilder).AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
