@@ -3,7 +3,6 @@ package flight
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net"
 
@@ -45,11 +44,14 @@ type Flight struct {
 // (Telegraf manages the buffer for you). Returning an error will fail this
 // batch of writes and the entire batch will be retried automatically.
 func (f *Flight) Write(metrics []telegraf.Metric) error {
+	fmt.Println(len(metrics))
 
 	builder := array.NewRecordBuilder(memory.DefaultAllocator, &f.schema)
 	defer builder.Release()
 
 	schemaFields := f.schema.Fields()
+
+	fmt.Println(schemaFields)
 
 	builder.Reserve(len(metrics))
 
@@ -57,34 +59,40 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 
 		timeInt := m.Time().UnixMilli()
 
-		var sliceOfFields []any
-
-		sliceOfFields = append(sliceOfFields, timeInt)
-
-		for _, field := range m.FieldList() {
-			sliceOfFields = append(sliceOfFields, field.Value)
-		}
-
-		fmt.Println(sliceOfFields)
-
-		for i, m := range schemaFields {
-			if len(schemaFields) != len(sliceOfFields) {
-				return errors.New("the number of fields in the schema does not match the number of fields in the metric")
-			}
-			switch m.Type.ID() {
+		for i, f := range schemaFields {
+			fmt.Println(f.Name)
+			switch f.Type.ID() {
 			case arrow.TIMESTAMP:
 				builder.Field(i).(*array.TimestampBuilder).AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
 			case arrow.INT32:
-				builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(sliceOfFields[i].(int64))}, nil)
+				for _, field := range m.FieldList() {
+					if field.Key == f.Name {
+						builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(field.Value.(float64))}, nil)
+					}
+				}
 			case arrow.INT64:
-				builder.Field(i).(*array.Int64Builder).AppendValues([]int64{sliceOfFields[i].(int64)}, nil)
-			case arrow.FLOAT64:
-				builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(sliceOfFields[i].(float64))}, nil)
+				for _, field := range m.FieldList() {
+					if field.Key == f.Name {
+						builder.Field(i).(*array.Int64Builder).AppendValues([]int64{field.Value.(int64)}, nil)
+					}
+				}
 			case arrow.FLOAT32:
-				builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(sliceOfFields[i].(float64))}, nil)
+				for _, field := range m.FieldList() {
+					if field.Key == f.Name {
+						builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(field.Value.(float64))}, nil)
+					}
+				}
+			case arrow.FLOAT64:
+				for _, field := range m.FieldList() {
+					if field.Key == f.Name {
+						builder.Field(i).(*array.Float64Builder).AppendValues([]float64{field.Value.(float64)}, nil)
+					}
+				}
 			}
 		}
 	}
+
+	fmt.Println(builder.Fields())
 
 	rec := builder.NewRecord()
 	defer rec.Release()
