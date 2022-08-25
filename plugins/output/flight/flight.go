@@ -44,14 +44,11 @@ type Flight struct {
 // (Telegraf manages the buffer for you). Returning an error will fail this
 // batch of writes and the entire batch will be retried automatically.
 func (f *Flight) Write(metrics []telegraf.Metric) error {
-	fmt.Println(len(metrics))
 
 	builder := array.NewRecordBuilder(memory.DefaultAllocator, &f.schema)
 	defer builder.Release()
 
 	schemaFields := f.schema.Fields()
-
-	fmt.Println(schemaFields)
 
 	builder.Reserve(len(metrics))
 
@@ -91,8 +88,6 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 			}
 		}
 	}
-
-	fmt.Println(builder.Fields())
 
 	rec := builder.NewRecord()
 	defer rec.Release()
