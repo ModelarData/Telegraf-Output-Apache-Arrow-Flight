@@ -3,6 +3,7 @@ package flight
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"net"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -59,29 +60,71 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 			switch f.Type.ID() {
 			case arrow.TIMESTAMP:
 				builder.Field(i).(*array.TimestampBuilder).AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
+			case arrow.STRING:
+				tag, wasSet := m.GetTag(f.Name)
+				if !wasSet {
+					fmt.Printf("tag %d : %s not set", i, f.Name)
+				}
+				builder.Field(i).(*array.StringBuilder).AppendValues([]string{tag}, nil)
 			case arrow.INT32:
-				for _, field := range m.FieldList() {
-					if field.Key == f.Name {
-						builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(field.Value.(float64))}, nil)
-					}
+				field, wasSet := m.GetField(f.Name)
+				if !wasSet {
+					fmt.Printf("field %d : %s not set", i, f.Name)
+				}
+				switch v := field.(type) {
+				case int32:
+					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{v}, nil)
+				case int64:
+					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(v)}, nil)
+				case float32:
+					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(v)}, nil)
+				case float64:
+					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(v)}, nil)
 				}
 			case arrow.INT64:
-				for _, field := range m.FieldList() {
-					if field.Key == f.Name {
-						builder.Field(i).(*array.Int64Builder).AppendValues([]int64{field.Value.(int64)}, nil)
-					}
+				field, wasSet := m.GetField(f.Name)
+				if !wasSet {
+					fmt.Printf("field %d : %s not set", i, f.Name)
+				}
+				switch v := field.(type) {
+				case int32:
+					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(v)}, nil)
+				case int64:
+					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{v}, nil)
+				case float32:
+					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(v)}, nil)
+				case float64:
+					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(v)}, nil)
 				}
 			case arrow.FLOAT32:
-				for _, field := range m.FieldList() {
-					if field.Key == f.Name {
-						builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(field.Value.(float64))}, nil)
-					}
+				field, wasSet := m.GetField(f.Name)
+				if !wasSet {
+					fmt.Printf("field %d : %s not set", i, f.Name)
+				}
+				switch v := field.(type) {
+				case int32:
+					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(v)}, nil)
+				case int64:
+					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(v)}, nil)
+				case float32:
+					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{v}, nil)
+				case float64:
+					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(v)}, nil)
 				}
 			case arrow.FLOAT64:
-				for _, field := range m.FieldList() {
-					if field.Key == f.Name {
-						builder.Field(i).(*array.Float64Builder).AppendValues([]float64{field.Value.(float64)}, nil)
-					}
+				field, wasSet := m.GetField(f.Name)
+				if !wasSet {
+					fmt.Printf("field %d : %s not set", i, f.Name)
+				}
+				switch v := field.(type) {
+				case int32:
+					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(v)}, nil)
+				case int64:
+					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(v)}, nil)
+				case float32:
+					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(v)}, nil)
+				case float64:
+					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{v}, nil)
 				}
 			}
 		}
