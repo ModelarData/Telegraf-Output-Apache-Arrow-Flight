@@ -45,6 +45,7 @@ type Flight struct {
 // batch of writes and the entire batch will be retried automatically.
 func (f *Flight) Write(metrics []telegraf.Metric) error {
 
+	// Create a new RecordBuilder using the schema.
 	builder := array.NewRecordBuilder(memory.DefaultAllocator, &f.schema)
 	defer builder.Release()
 
@@ -52,88 +53,102 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 
 	builder.Reserve(len(metrics))
 
-	for _, m := range metrics {
+	// Iterate through the metrics and add them to the RecordBuilder.
+	for _, metric := range metrics {
 
-		timeInt := m.Time().UnixMilli()
+		timeInt := metric.Time().UnixMilli()
 
-		for i, f := range schemaFields {
-			switch f.Type.ID() {
+		// Iterate through the fields in the schema, extract the tag or field
+		// values from the metric using getTag or getField,
+		// and add the corresponding value to the correct builder in RecordBuilder.
+		// If the value is not set in the metric, panic and print the error.
+		//
+		// The switches for the types inside each case are necessary because the type
+		// represented by the schema is not always the same as the type represented by the metric.
+		// For example, JSON does not define types and therefore parses all integers
+		// as floats. If the schema expects an integer in the field, Apache Arrow will panic.
+		for i, schemaField := range schemaFields {
+			switch schemaField.Type.ID() {
 			case arrow.TIMESTAMP:
 				builder.Field(i).(*array.TimestampBuilder).AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
 			case arrow.STRING:
-				tag, wasSet := m.GetTag(f.Name)
-				if !wasSet {
-					fmt.Printf("tag %d : %s not set", i, f.Name)
-				}
-				builder.Field(i).(*array.StringBuilder).AppendValues([]string{tag}, nil)
+				metricTag := getTag(metric, schemaField, i)
+				builder.Field(i).(*array.StringBuilder).AppendValues([]string{metricTag}, nil)
 			case arrow.INT32:
-				field, wasSet := m.GetField(f.Name)
-				if !wasSet {
-					fmt.Printf("field %d : %s not set", i, f.Name)
-				}
-				switch v := field.(type) {
+				metricField := getField(metric, schemaField, i)
+				switch value := metricField.(type) {
 				case int32:
-					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{v}, nil)
+					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{value}, nil)
 				case int64:
-					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(v)}, nil)
+					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(value)}, nil)
 				case float32:
-					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(v)}, nil)
+					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(value)}, nil)
 				case float64:
-					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(v)}, nil)
+					builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(value)}, nil)
 				}
 			case arrow.INT64:
-				field, wasSet := m.GetField(f.Name)
-				if !wasSet {
-					fmt.Printf("field %d : %s not set", i, f.Name)
-				}
-				switch v := field.(type) {
+				metricField := getField(metric, schemaField, i)
+				switch value := metricField.(type) {
 				case int32:
-					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(v)}, nil)
+					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(value)}, nil)
 				case int64:
-					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{v}, nil)
+					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{value}, nil)
 				case float32:
-					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(v)}, nil)
+					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(value)}, nil)
 				case float64:
-					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(v)}, nil)
+					builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(value)}, nil)
 				}
 			case arrow.FLOAT32:
-				field, wasSet := m.GetField(f.Name)
-				if !wasSet {
-					fmt.Printf("field %d : %s not set", i, f.Name)
-				}
-				switch v := field.(type) {
+				metricField := getField(metric, schemaField, i)
+				switch value := metricField.(type) {
 				case int32:
-					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(v)}, nil)
+					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(value)}, nil)
 				case int64:
-					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(v)}, nil)
+					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(value)}, nil)
 				case float32:
-					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{v}, nil)
+					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{value}, nil)
 				case float64:
-					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(v)}, nil)
+					builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(value)}, nil)
 				}
 			case arrow.FLOAT64:
-				field, wasSet := m.GetField(f.Name)
-				if !wasSet {
-					fmt.Printf("field %d : %s not set", i, f.Name)
-				}
-				switch v := field.(type) {
+				metricField := getField(metric, schemaField, i)
+				switch value := metricField.(type) {
 				case int32:
-					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(v)}, nil)
+					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(value)}, nil)
 				case int64:
-					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(v)}, nil)
+					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(value)}, nil)
 				case float32:
-					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(v)}, nil)
+					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(value)}, nil)
 				case float64:
-					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{v}, nil)
+					builder.Field(i).(*array.Float64Builder).AppendValues([]float64{value}, nil)
 				}
 			}
 		}
 	}
 
+	// Create a new Record from the RecordBuilder.
 	rec := builder.NewRecord()
 	defer rec.Release()
 
 	return f.writer.Write(rec)
+}
+
+// getTag returns the value of the metric tag with the name equal to the name of the schema field.
+func getTag(metric telegraf.Metric, schemaField arrow.Field, i int) string {
+	metricTag, wasSet := metric.GetTag(schemaField.Name)
+	if !wasSet {
+		panic(fmt.Sprintf("tag %d : %s not set", i, schemaField.Name))
+	}
+	return metricTag
+}
+
+// getField returns the value of the metric field with the name equal to the name of the schema field.
+func getField(metric telegraf.Metric, schemaField arrow.Field, i int) interface{} {
+	metricField, wasSet := metric.GetField(schemaField.Name)
+	if !wasSet {
+		panic(fmt.Sprintf("field %d : %s not set", i, schemaField.Name))
+	}
+	return metricField
 }
 
 // Connect to the Apache Arrow Flight server. If an error is at any point returned
