@@ -114,9 +114,7 @@ func (f *Flight) Write(metrics []telegraf.Metric) error {
 
 	// Iterate through the metrics and add them to the RecordBuilder.
 	for _, metric := range metrics {
-
 		addMetricToRecordBuilder(schemaFields, builder, metric)
-
 	}
 
 	// Create a new Record from the RecordBuilder.
@@ -142,62 +140,61 @@ func (f *Flight) Close() error {
 // as floats. If the schema expects an integer in the field, Apache Arrow will panic.
 func addMetricToRecordBuilder(schemaFields []arrow.Field, builder *array.RecordBuilder, metric telegraf.Metric) {
 
-	timeInt := metric.Time().UnixMilli()
-
 	for i, schemaField := range schemaFields {
 		switch schemaField.Type.ID() {
 		case arrow.TIMESTAMP:
-			builder.Field(i).(*array.TimestampBuilder).AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
+			timeInt := metric.Time().UnixMilli()
+			builder.Field(i).(*array.TimestampBuilder).Append(arrow.Timestamp(timeInt))
 		case arrow.STRING:
 			metricTag := getTag(metric, schemaField, i)
-			builder.Field(i).(*array.StringBuilder).AppendValues([]string{metricTag}, nil)
+			builder.Field(i).(*array.StringBuilder).Append(metricTag)
 		case arrow.INT32:
 			metricField := getField(metric, schemaField, i)
 			switch value := metricField.(type) {
 			case int32:
-				builder.Field(i).(*array.Int32Builder).AppendValues([]int32{value}, nil)
+				builder.Field(i).(*array.Int32Builder).Append(value)
 			case int64:
-				builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(value)}, nil)
+				builder.Field(i).(*array.Int32Builder).Append(int32(value))
 			case float32:
-				builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(value)}, nil)
+				builder.Field(i).(*array.Int32Builder).Append(int32(value))
 			case float64:
-				builder.Field(i).(*array.Int32Builder).AppendValues([]int32{int32(value)}, nil)
+				builder.Field(i).(*array.Int32Builder).Append(int32(value))
 			}
 		case arrow.INT64:
 			metricField := getField(metric, schemaField, i)
 			switch value := metricField.(type) {
 			case int32:
-				builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(value)}, nil)
+				builder.Field(i).(*array.Int64Builder).Append(int64(value))
 			case int64:
-				builder.Field(i).(*array.Int64Builder).AppendValues([]int64{value}, nil)
+				builder.Field(i).(*array.Int64Builder).Append(value)
 			case float32:
-				builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(value)}, nil)
+				builder.Field(i).(*array.Int64Builder).Append(int64(value))
 			case float64:
-				builder.Field(i).(*array.Int64Builder).AppendValues([]int64{int64(value)}, nil)
+				builder.Field(i).(*array.Int64Builder).Append(int64(value))
 			}
 		case arrow.FLOAT32:
 			metricField := getField(metric, schemaField, i)
 			switch value := metricField.(type) {
 			case int32:
-				builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(value)}, nil)
+				builder.Field(i).(*array.Float32Builder).Append(float32(value))
 			case int64:
-				builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(value)}, nil)
+				builder.Field(i).(*array.Float32Builder).Append(float32(value))
 			case float32:
-				builder.Field(i).(*array.Float32Builder).AppendValues([]float32{value}, nil)
+				builder.Field(i).(*array.Float32Builder).Append(value)
 			case float64:
-				builder.Field(i).(*array.Float32Builder).AppendValues([]float32{float32(value)}, nil)
+				builder.Field(i).(*array.Float32Builder).Append(float32(value))
 			}
 		case arrow.FLOAT64:
 			metricField := getField(metric, schemaField, i)
 			switch value := metricField.(type) {
 			case int32:
-				builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(value)}, nil)
+				builder.Field(i).(*array.Float64Builder).Append(float64(value))
 			case int64:
-				builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(value)}, nil)
+				builder.Field(i).(*array.Float64Builder).Append(float64(value))
 			case float32:
-				builder.Field(i).(*array.Float64Builder).AppendValues([]float64{float64(value)}, nil)
+				builder.Field(i).(*array.Float64Builder).Append(float64(value))
 			case float64:
-				builder.Field(i).(*array.Float64Builder).AppendValues([]float64{value}, nil)
+				builder.Field(i).(*array.Float64Builder).Append(value)
 			}
 		}
 	}
@@ -206,6 +203,8 @@ func addMetricToRecordBuilder(schemaFields []arrow.Field, builder *array.RecordB
 // Return the value of the metric tag with the name equal to the name of the schema field.
 func getTag(metric telegraf.Metric, schemaField arrow.Field, i int) string {
 	metricTag, wasSet := metric.GetTag(schemaField.Name)
+	// If the tag is not set, the program will panic.
+	// This is to prevent the plugin from attempting a retransmit.
 	if !wasSet {
 		panic(fmt.Sprintf("tag %d : %s not set", i, schemaField.Name))
 	}
@@ -215,6 +214,8 @@ func getTag(metric telegraf.Metric, schemaField arrow.Field, i int) string {
 // Return the value of the metric field with the name equal to the name of the schema field.
 func getField(metric telegraf.Metric, schemaField arrow.Field, i int) interface{} {
 	metricField, wasSet := metric.GetField(schemaField.Name)
+	// If the field is not set, the program will panic.
+	// This is to prevent the plugin from attempting a retransmit.
 	if !wasSet {
 		panic(fmt.Sprintf("field %d : %s not set", i, schemaField.Name))
 	}
