@@ -4,17 +4,8 @@ This Telegraf output plugin is a general purpose output plugin for the [Apache A
 
 ## Arrow Schema
 
-The plugin currently supports outputting data points with the following schema:
-
-```go
-schema:
-  fields: 3
-    - tid: type=int32 // Unused and deprecated time series identifier.
-    - timestamp: type=timestamp[ms]
-    - value: type=float32
-```
-
-Support for arbitrary schemas is planned.
+The plugin currently supports outputting data points to any schema retrived from the table defined in the configuration.
+It assumes that any string defined in the schema is a tag in the Telegraf metric.
 
 ## Setting up and running the plugin
 
@@ -60,5 +51,4 @@ The following configuration is a [sample configuration](\plugins\output\flight\s
 ```
 ## Known issues and limitations
 
-* Currently, the plugin only implements support for the simplest schema supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS), as listed above. Support for an arbitrary schema is planned.
 * This plugin is not compatible with the Rust implementation of Apache Arrow Flight, because a [bug](https://github.com/apache/arrow-rs/issues/2445) is present in the Rust implementation of Apache Arrow Flight where the schema is not serialized properly.

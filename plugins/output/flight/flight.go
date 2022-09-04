@@ -3,6 +3,7 @@ package flight
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"net"
 
 	"github.com/apache/arrow/go/v9/arrow"
@@ -39,41 +40,8 @@ type Flight struct {
 	desc   *flight.FlightDescriptor
 }
 
-// Write should write immediately to the output, and not buffer writes
-// (Telegraf manages the buffer for you). Returning an error will fail this
-// batch of writes and the entire batch will be retried automatically.
-func (f *Flight) Write(metrics []telegraf.Metric) error {
-
-	builder := array.NewRecordBuilder(memory.DefaultAllocator, &f.schema)
-	defer builder.Release()
-
-	// Currently, the plugin only implements support for the simplest schema
-	// supported by legacy JVM and current Rust versions of [ModelarDB](https://github.com/ModelarData/ModelarDB-RS),
-	// as listed below. Support for an arbitrary schema is planned.
-
-	tidBuilder := builder.Field(0).(*array.Int32Builder) // Unused and deprecated time series identifier.
-	timeBuilder := builder.Field(1).(*array.TimestampBuilder)
-	valueBuilder := builder.Field(2).(*array.Float32Builder)
-
-	builder.Reserve(len(metrics))
-
-	for _, m := range metrics {
-
-		tidBuilder.AppendValues([]int32{1}, nil)
-
-		timeInt := m.Time().UnixMilli()
-
-		timeBuilder.AppendValues([]arrow.Timestamp{arrow.Timestamp(timeInt)}, nil)
-
-		fieldlst := m.FieldList()
-
-		valueBuilder.AppendValues([]float32{float32(fieldlst[0].Value.(float64))}, nil)
-	}
-
-	rec := builder.NewRecord()
-	defer rec.Release()
-
-	return f.writer.Write(rec)
+func init() {
+	outputs.Add("flight", func() telegraf.Output { return &Flight{} })
 }
 
 // Connect to the Apache Arrow Flight server. If an error is at any point returned
@@ -131,11 +99,127 @@ func (f *Flight) Connect() error {
 	return nil
 }
 
+// Write should write immediately to the output, and not buffer writes
+// (Telegraf manages the buffer for you). Returning an error will fail this
+// batch of writes and the entire batch will be retried automatically.
+func (f *Flight) Write(metrics []telegraf.Metric) error {
+
+	// Create a new RecordBuilder using the schema.
+	builder := array.NewRecordBuilder(memory.DefaultAllocator, &f.schema)
+	defer builder.Release()
+
+	schemaFields := f.schema.Fields()
+
+	builder.Reserve(len(metrics))
+
+	// Iterate through the metrics and add them to the RecordBuilder.
+	for _, metric := range metrics {
+		addMetricToRecordBuilder(schemaFields, builder, metric)
+	}
+
+	// Create a new Record from the RecordBuilder.
+	rec := builder.NewRecord()
+	defer rec.Release()
+
+	return f.writer.Write(rec)
+}
+
 // Close the connection to the Apache Arrow Flight server.
 func (f *Flight) Close() error {
 	return f.writer.Close()
 }
 
-func init() {
-	outputs.Add("flight", func() telegraf.Output { return &Flight{} })
+// Iterate through the fields in the schema,
+// extract the tag or field values from the metric using getTag or getField,
+// and add the corresponding value to the correct builder in RecordBuilder.
+// If the value is not set in the metric, panic and print the error.
+//
+// The switches for the types inside each case are necessary because the type
+// represented by the schema is not always the same as the type represented by the metric.
+// For example, JSON does not define types and therefore parses all integers
+// as floats. If the schema expects an integer in the field, Apache Arrow will panic.
+func addMetricToRecordBuilder(schemaFields []arrow.Field, builder *array.RecordBuilder, metric telegraf.Metric) {
+
+	for i, schemaField := range schemaFields {
+		switch schemaField.Type.ID() {
+		case arrow.TIMESTAMP:
+			timeInt := metric.Time().UnixMilli()
+			builder.Field(i).(*array.TimestampBuilder).Append(arrow.Timestamp(timeInt))
+		case arrow.STRING:
+			metricTag := getTag(metric, schemaField, i)
+			builder.Field(i).(*array.StringBuilder).Append(metricTag)
+		case arrow.INT32:
+			metricField := getField(metric, schemaField, i)
+			switch value := metricField.(type) {
+			case int32:
+				builder.Field(i).(*array.Int32Builder).Append(value)
+			case int64:
+				builder.Field(i).(*array.Int32Builder).Append(int32(value))
+			case float32:
+				builder.Field(i).(*array.Int32Builder).Append(int32(value))
+			case float64:
+				builder.Field(i).(*array.Int32Builder).Append(int32(value))
+			}
+		case arrow.INT64:
+			metricField := getField(metric, schemaField, i)
+			switch value := metricField.(type) {
+			case int32:
+				builder.Field(i).(*array.Int64Builder).Append(int64(value))
+			case int64:
+				builder.Field(i).(*array.Int64Builder).Append(value)
+			case float32:
+				builder.Field(i).(*array.Int64Builder).Append(int64(value))
+			case float64:
+				builder.Field(i).(*array.Int64Builder).Append(int64(value))
+			}
+		case arrow.FLOAT32:
+			metricField := getField(metric, schemaField, i)
+			switch value := metricField.(type) {
+			case int32:
+				builder.Field(i).(*array.Float32Builder).Append(float32(value))
+			case int64:
+				builder.Field(i).(*array.Float32Builder).Append(float32(value))
+			case float32:
+				builder.Field(i).(*array.Float32Builder).Append(value)
+			case float64:
+				builder.Field(i).(*array.Float32Builder).Append(float32(value))
+			}
+		case arrow.FLOAT64:
+			metricField := getField(metric, schemaField, i)
+			switch value := metricField.(type) {
+			case int32:
+				builder.Field(i).(*array.Float64Builder).Append(float64(value))
+			case int64:
+				builder.Field(i).(*array.Float64Builder).Append(float64(value))
+			case float32:
+				builder.Field(i).(*array.Float64Builder).Append(float64(value))
+			case float64:
+				builder.Field(i).(*array.Float64Builder).Append(value)
+			}
+		}
+	}
+}
+
+// Return the value of the metric tag with the name equal to the name of the schema field.
+func getTag(metric telegraf.Metric, schemaField arrow.Field, i int) string {
+	metricTag, wasSet := metric.GetTag(schemaField.Name)
+	// If the tag is not set, the program will panic.
+	// This is to prevent Telegraf from attempting to
+	// retransmit metric when the required value is missing.
+	if !wasSet {
+		panic(fmt.Sprintf("tag %d : %s not set", i, schemaField.Name))
+	}
+	return metricTag
+}
+
+// Return the value of the metric field with the name equal to the name of the schema field.
+func getField(metric telegraf.Metric, schemaField arrow.Field, i int) interface{} {
+	metricField, wasSet := metric.GetField(schemaField.Name)
+	// If the field is not set, the program will panic.
+	// This is to prevent Telegraf from attempting to
+	// retransmit metric when the required value is missing.
+	if !wasSet {
+		panic(fmt.Sprintf("field %d : %s not set", i, schemaField.Name))
+	}
+	return metricField
 }
