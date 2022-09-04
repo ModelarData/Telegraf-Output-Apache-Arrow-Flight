@@ -204,8 +204,8 @@ func addMetricToRecordBuilder(schemaFields []arrow.Field, builder *array.RecordB
 func getTag(metric telegraf.Metric, schemaField arrow.Field, i int) string {
 	metricTag, wasSet := metric.GetTag(schemaField.Name)
 	// If the tag is not set, the program will panic.
-	// This is to prevent the plugin from attempting a retransmit.
-	// a retransmit if the recuired value is missing.
+	// This is to prevent Telegraf from attempting to
+	// retransmit metric when the required value is missing.
 	if !wasSet {
 		panic(fmt.Sprintf("tag %d : %s not set", i, schemaField.Name))
 	}
@@ -216,8 +216,8 @@ func getTag(metric telegraf.Metric, schemaField arrow.Field, i int) string {
 func getField(metric telegraf.Metric, schemaField arrow.Field, i int) interface{} {
 	metricField, wasSet := metric.GetField(schemaField.Name)
 	// If the field is not set, the program will panic.
-	// This is to prevent the plugin from attempting
-	// a retransmit if the recuired value is missing.
+	// This is to prevent Telegraf from attempting to
+	// retransmit metric when the required value is missing.
 	if !wasSet {
 		panic(fmt.Sprintf("field %d : %s not set", i, schemaField.Name))
 	}
