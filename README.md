@@ -49,3 +49,6 @@ The following configuration is a [sample configuration](\plugins\output\flight\s
     ## Name of the table to store the metrics in.
     table = "data"
 ```
+
+## License
+The Apache Arrow Flight Telegraf Output Plugin is licensed under version 2.0 of the Apache License and a copy of the license is bundled with the program.
