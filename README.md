@@ -49,6 +49,3 @@ The following configuration is a [sample configuration](\plugins\output\flight\s
     ## Name of the table to store the metrics in.
     table = "data"
 ```
-## Known issues and limitations
-
-* This plugin is not compatible with the Rust implementation of Apache Arrow Flight, because a [bug](https://github.com/apache/arrow-rs/issues/2445) is present in the Rust implementation of Apache Arrow Flight where the schema is not serialized properly.
