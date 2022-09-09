@@ -2,12 +2,13 @@
 
 This Telegraf output plugin is a general purpose output plugin for the [Apache Arrow Flight protocol](https://arrow.apache.org/docs/format/Flight.html).
 
-## Arrow Schema
+## Overview
 
-The plugin currently supports outputting data points to any schema retrived from the table defined in the configuration.
-It assumes that any string defined in the schema is a tag in the Telegraf metric.
+The plugin currently supports outputting Telegraf metrics to the Apache Arrow Flight server and table specified in the [sample configuration](/plugins/output/flight/sample.conf).
+It uses the type of each column in the table to determine which part of the metrics should be assigned to that column.
+If the column has the type `TIMESTAMP` `metric.Time().UnixMilli()` is assigned to it, if the column has the type `STRING` the tag with the same name is assigned to it, for columns of all other types the field with the same name is assigned to it.
 
-## Setting up and running the plugin
+## Installation
 
 To build the binary and run the plugin:
 
@@ -24,18 +25,18 @@ To build the binary and run the plugin:
      * Linux/macOS: Assign the following to `command` so the resulting line becomes:
       `command = ["/path/to/flight", "-config", "/path/to/sample.conf"]`
    * Configure any input plugin to consume metrics. (The metric must adhere to the schema presented in this README)
-6. Configure the [sample configuration](/plugins/output/flight/sample.conf) to connect to the desired server, and designate the desired table to store metrics in.
+6. Update the [sample configuration](/plugins/output/flight/sample.conf) to specify the Apache Arrow Flight server to connect to and the table to insert metrics into.
 7. Run the plugin using Telegraf: `telegraf --config telegraf.conf --input-filter chosen_input_plugin --output-filter execd`
 
 To run the tests:
 1. Install the latest version of [Go](https://go.dev/doc/install).
-2. Start an Apache Arrow Flight Server.
+2. Start an Apache Arrow Flight Server on port 9999.
 3. Run the command: `go test plugins/output/flight/flight_test.go plugins/output/flight/flight.go`
 
 
 ## Configuration
 
-The following configuration is a [sample configuration](/plugins/output/flight/sample.conf) used to connect to the Arrow Flight Server and configure what table to insert the data into.
+The following configuration is a [sample configuration](/plugins/output/flight/sample.conf) used to specify the Arrow Flight server to connect to and the table to insert metrics into.
 
 ```toml @sample.conf
 ## Configuration for where the Arrow Flight Client will send metrics to.
