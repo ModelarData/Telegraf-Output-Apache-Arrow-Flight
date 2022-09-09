@@ -24,7 +24,7 @@ To build the binary and run the plugin:
      * Linux/macOS: Assign the following to `command` so the resulting line becomes:
       `command = ["/path/to/flight", "-config", "/path/to/sample.conf"]`
    * Configure any input plugin to consume metrics. (The metric must adhere to the schema presented in this README)
-6. Configure the [sample configuration](\plugins\output\flight\sample.conf) to connect to the desired server, and designate the desired table to store metrics in.
+6. Configure the [sample configuration](/plugins/output/flight/sample.conf) to connect to the desired server, and designate the desired table to store metrics in.
 7. Run the plugin using Telegraf: `telegraf --config telegraf.conf --input-filter chosen_input_plugin --output-filter execd`
 
 To run the tests:
@@ -35,7 +35,7 @@ To run the tests:
 
 ## Configuration
 
-The following configuration is a [sample configuration](\plugins\output\flight\sample.conf) used to connect to the Arrow Flight Server and configure what table to insert the data into.
+The following configuration is a [sample configuration](/plugins/output/flight/sample.conf) used to connect to the Arrow Flight Server and configure what table to insert the data into.
 
 ```toml @sample.conf
 ## Configuration for where the Arrow Flight Client will send metrics to.
@@ -51,4 +51,5 @@ The following configuration is a [sample configuration](\plugins\output\flight\s
 ```
 
 ## License
+
 The Apache Arrow Flight Telegraf Output Plugin is licensed under version 2.0 of the Apache License and a copy of the license is bundled with the program.
