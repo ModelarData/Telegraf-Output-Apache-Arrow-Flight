@@ -19,15 +19,15 @@ To build the binary and run the plugin:
 4. Extract the Telegraf binaries and configuration to the repository folder.
 5. Configure the `telegraf.conf` file:
    * In `telegraf.conf`, remove the comment in front of the tag `[[outputs.execd]]` and the option `command`.
-     * Windows: Assign the following to `command` so the resulting line becomes:  
-      `command = ["/path/to/flight.exe", "-config", "/path/to/sample.conf"]` 
-     * Linux/macOS: Assign the following to `command` so the resulting line becomes:  
-      `command = ["/path/to/flight", "-config", "/path/to/sample.conf"]` 
+     * Windows: Assign the following to `command` so the resulting line becomes:
+      `command = ["/path/to/flight.exe", "-config", "/path/to/sample.conf"]`
+     * Linux/macOS: Assign the following to `command` so the resulting line becomes:
+      `command = ["/path/to/flight", "-config", "/path/to/sample.conf"]`
    * Configure any input plugin to consume metrics. (The metric must adhere to the schema presented in this README)
 6. Configure the [sample configuration](\plugins\output\flight\sample.conf) to connect to the desired server, and designate the desired table to store metrics in.
 7. Run the plugin using Telegraf: `telegraf --config telegraf.conf --input-filter chosen_input_plugin --output-filter execd`
 
-To run the tests: 
+To run the tests:
 1. Install the latest version of [Go](https://go.dev/doc/install).
 2. Start an Apache Arrow Flight Server.
 3. Run the command: `go test plugins/output/flight/flight_test.go plugins/output/flight/flight.go`
@@ -45,7 +45,7 @@ The following configuration is a [sample configuration](\plugins\output\flight\s
 
     ## Port to connect to.
     port = "9999"
-    
+
     ## Name of the table to store the metrics in.
     table = "data"
 ```
