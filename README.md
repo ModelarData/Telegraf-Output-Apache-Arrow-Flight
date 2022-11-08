@@ -13,18 +13,18 @@ If the column has the type `TIMESTAMP` `metric.Time().UnixMilli()` is assigned t
 To build the binary and run the plugin:
 
 1. Install the latest version of [Go](https://go.dev/doc/install).
-2. Build the binary:
+2. Build the plugin:
     * Windows: `go build -o binary/flight.exe cmd/main.go`
     * Linux/macOS: `go build -o binary/flight cmd/main.go`
 3. Download the latest version of [Telegraf](https://portal.influxdata.com/downloads/) for your platform. (To see which platform is needed, run the following command: `go env GOOS GOARCH`)
 4. Extract the Telegraf binaries and configuration to the repository folder.
 5. Configure the `telegraf.conf` file:
-   * In `telegraf.conf`, remove the comment in front of the tag `[[outputs.execd]]` and the option `command`.
+   * In `telegraf.conf`, remove the comment in front of `[[outputs.execd]]` and its option `command`.
      * Windows: Assign the following to `command` so the resulting line becomes:
       `command = ["/path/to/flight.exe", "-config", "/path/to/sample.conf"]`
      * Linux/macOS: Assign the following to `command` so the resulting line becomes:
       `command = ["/path/to/flight", "-config", "/path/to/sample.conf"]`
-   * Configure any input plugin to consume metrics. (The metric must adhere to the schema presented in this README)
+   * Configure any input plugin to consume metrics.
 6. Update the [sample configuration](/plugins/output/flight/sample.conf) to specify the Apache Arrow Flight server to connect to and the table to insert metrics into.
 7. Run the plugin using Telegraf: `telegraf --config telegraf.conf --input-filter chosen_input_plugin --output-filter execd`
 
